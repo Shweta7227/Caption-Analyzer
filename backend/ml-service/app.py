@@ -19,7 +19,7 @@ print("Model ready!")
 LEET_MAP = {
     '0': 'o', '1': 'i', '3': 'e', '4': 'a',
     '5': 's', '7': 't', '@': 'a', '$': 's',
-    '!': 'i', '+': 't', '#': 'h'
+    '!': 'i', '+': 't', '#': 'h', '*': 'i'
 }
 
 def normalize(text):
@@ -47,10 +47,11 @@ HATE_PATTERNS = [
     r'\b(women (should|must) (not|stay|shut))\b',
     # nationality
     r'\bgo back to (your country|where you came from)\b',
-    r'\b(people from \w+ are (stupid|inferior|useless|trash))\b',
+    r'\b(people from \w+ are (stupid|inferior|useless|trash|bullshit))\b',
     r'\b(they should not exist)\b',
     r'\b(those people are inferior)\b',
 ]
+
 
 # ─── Sarcasm / Hidden Toxicity Patterns ───────────────────────
 SARCASM_PATTERNS = [
@@ -84,6 +85,57 @@ BLOCKED_EMOJIS = {
     '🍾': 'promotion of alcohol',
     '🍷': 'promotion of alcohol',
 }
+# ─── Harmful Intent Patterns ──────────────────────────────────
+# Catches combination-based harmful sentences that BERT misses
+HARMFUL_INTENT_PATTERNS = [
+
+    # Weapons / explosives
+    r'\b(how to|ways? to|steps? to|guide to|make|build|create|craft).{0,30}(bomb|explosive|grenade|weapon|gun|pistol|rifle)\b',
+    r'\b(make|build|assemble).{0,20}(bomb|explosive|weapon)\b',
+
+    # Poison / harm someone
+    r'\b(how to|ways? to|best way to).{0,30}(poison|drug|sedate|kill|murder|harm|hurt).{0,20}(someone|a person|people|him|her|them)\b',
+    r'\b(poison|drug).{0,20}(someone|quietly|secretly|without)\b',
+
+    # Hacking / cybercrime
+    r'\b(how to|ways? to).{0,30}(hack|crack|break into|access).{0,30}(account|instagram|facebook|email|system|password|phone)\b',
+    r'\b(hack|steal).{0,20}(account|password|data|information)\b',
+
+    # Physical break-in
+    r'\b(how to|ways? to).{0,30}(break into|enter|sneak into|get into).{0,30}(house|home|building|room|car)\b',
+
+    # Torture / violence instructions
+    r'\b(how to|ways? to|steps? to).{0,30}(torture|hurt|harm|beat|attack|assault).{0,20}(someone|a person|him|her|them|people)\b',
+    r'\b(torture|harm|hurt).{0,20}(without|no|leaving).{0,20}(marks?|trace|evidence|proof)\b',
+
+    # Manipulation / blackmail
+    r'\b(how to|ways? to).{0,30}(manipulate|blackmail|extort|threaten|control).{0,20}(someone|people|him|her|them)\b',
+    r'\b(blackmail|extort).{0,20}(someone|online|person)\b',
+
+    # Fake news / misinformation
+    r'\b(how to|ways? to).{0,30}(spread|create|make).{0,20}(fake news|misinformation|propaganda|rumours?|lies)\b',
+
+    # Disappear / evade law
+    r'\b(how to|ways? to).{0,30}(disappear|hide|escape|evade).{0,20}(without|from|police|law|trace|being found)\b',
+
+    # Destroy reputation / harass
+    r'\b(how to|ways? to).{0,30}(destroy|ruin|damage).{0,20}(reputation|life|career|image)\b',
+
+    # Eliminate / eradicate people
+    r'\b(eliminate|eradicate|wipe out|get rid of).{0,20}(them|all|people|community|group|everyone)\b',
+    r'\b(we should|let.s).{0,20}(eliminate|remove|get rid of|destroy).{0,20}(them|all|people|community)\b',
+
+    # Self harm instruction
+    r'\b(how to|ways? to).{0,30}(hurt yourself|harm yourself|self.harm|self.destruct)\b',
+    r'\byou should (hurt|harm|kill) yourself\b',
+]
+
+def check_harmful_intent(text):
+    lower = text.lower()
+    for pattern in HARMFUL_INTENT_PATTERNS:
+        if re.search(pattern, lower):
+            return True
+    return False
 
 def check_blocked_emojis(text):
     for emoji, reason in BLOCKED_EMOJIS.items():
@@ -144,6 +196,14 @@ def analyze():
             'reason': f'Your caption contains an emoji ({found_emoji}) that signals {emoji_reason}.',
             'severity': 'block'
         })
+    # Step 2c — harmful intent / combination sentence check
+    if check_harmful_intent(original):
+        return jsonify({
+            'allowed': False,
+            'label': 'Harmful intent detected',
+            'reason': 'Your caption contains language that describes or instructs harmful, dangerous, or illegal activity.',
+            'severity': 'block'
+        })
 
     # Step 3 — run ML model on normalized text
     results = classifier(cleaned)[0]
@@ -157,7 +217,7 @@ def analyze():
     hate    = scores.get('identity_hate', 0)
     toxic   = scores.get('toxic', 0)
 
-    # Strict block — high severity
+    # Strict block 
     if severe > 0.4:
         return jsonify({ 'allowed': False, 'label': 'Severely toxic', 'reason': 'Your caption contains severely toxic content.', 'severity': 'block', 'scores': scores })
     if threat > 0.4:

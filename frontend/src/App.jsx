@@ -56,7 +56,7 @@ export default function App() {
             <span className="logo-icon">✦</span>
             <span className="logo-text">CaptionGuard</span>
           </div>
-          <p className="header-sub">AI-powered safe social sharing</p>
+          <p className="header-sub">Safe social sharing</p>
         </div>
       </header>
 
@@ -115,7 +115,7 @@ export default function App() {
               <div className="modal-avatar">YO</div>
               <div>
                 <div className="modal-title">Create a Post</div>
-                <div className="modal-sub">Your caption will be scanned by AI before sharing</div>
+                <div className="modal-sub">Your caption will be scanned before sharing</div>
               </div>
             </div>
 
@@ -164,7 +164,7 @@ export default function App() {
                 <span className="block-icon">🚫</span>
               </div>
               <h2 className="block-title">Post Blocked</h2>
-              <p className="block-sub">Your caption was flagged by our AI safety system</p>
+              <p className="block-sub">Your caption was flagged by our safety system</p>
             </div>
 
             <div className="block-reason-box">
